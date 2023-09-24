@@ -165,7 +165,7 @@ ssh-keygen -m PEM -t rsa -b 4096<br>
 -b 4096：指定了密钥的比特长度为4096位<br>
 \# 在~/.ssh/⽬录中会⽣成⼀对密钥⽂件<br>
 \# 其中id_rsa为私钥，id_rsa.pub为公钥<br>
-\# 输出公钥⽂件的内容
+\# 输出公钥⽂件的内容<br>
 cat ~/.ssh/id_rsa.pub
 
 将公钥上传至github或gitee中
@@ -188,7 +188,8 @@ git branch -r 列出远程所有分支
 
 git branch name<br> 建立新的分支并停留在原分支
 
-git checkout -b [branch]<br> 新建分支并切换到新的分支
+git checkout -b [branch]<br> 
+新建分支并切换到新的分支
 
 git checkout [branch]<br>
 切换分支
