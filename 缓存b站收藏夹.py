@@ -27,19 +27,7 @@ def initConfig():
     global uid,cookies
     config_file = os.path.join(current_directory, 'DownLoadFavconfig.ini')
     if not os.path.exists(config_file):
-        default_config = configparser.RawConfigParser()
-        print("请输入您的uid:",end="")
-        uid  = input()
-        print("请输入您的cookies(似乎用私密模式获得的效果更好):",end="")
-        cookies['cookie'] = input()
-        default_config['user'] = {
-            'uid': uid,
-            'cookies': cookies['cookie']
-        }
-        with open(config_file, 'w') as file:
-            default_config.write(file)
-        print("您的配置文件存储在：",config_file)
-        logging.info("配置文件写入完成")
+        updateConfig(config_file=config_file)
     config = configparser.ConfigParser(interpolation=None)
     config.read(config_file)
     if config.has_section('user'):
@@ -50,6 +38,26 @@ def initConfig():
     else:
         print("配置文件中缺少 'user' 部分，请检查配置文件格式。")
         logging.warning("配置文件错误！")
+        updateConfig(config_file)
+
+#更新配置文件
+def updateConfig(config_file):
+    default_config = configparser.RawConfigParser()
+    while True:
+        uid  = input("请输入您的uid:")
+        if uid.isdigit():
+            break
+        else:
+            print("请输入正确的uid!")
+    cookies['cookie'] = input("请输入您的cookies(似乎用私密模式获得的效果更好):")
+    default_config['user'] = {
+        'uid': uid,
+        'cookies': cookies['cookie']
+    }
+    with open(config_file, 'w') as file:
+        default_config.write(file)
+    print("您的配置文件存储在：",config_file)
+    logging.info("配置文件写入完成")
 
 #获取全部收藏夹
 def getFavor()->str:
@@ -57,7 +65,7 @@ def getFavor()->str:
     logging.info("读取收藏夹...")
     url = 'https://api.bilibili.com/x/v3/fav/folder/created/list-all'
     params = {'up_mid': uid}
-    response = requests.get(url, cookies = cookies,params=params)
+    response = doGetRequest(url,params=params)
     if response.status_code == 200:
         print("读取全部收藏夹成功！")
         logging.info("读取全部收藏夹成功！")
@@ -66,6 +74,14 @@ def getFavor()->str:
         print(f'获取失败，状态码：{response.status_code}')
         logging.warning(f'获取失败，状态码：{response.status_code}')
         return 'error'
+
+#做get请求
+def doGetRequest(url, params=None, **kwargs):
+    try:
+        return requests.get(url, cookies = cookies,params=params)
+    except Exception as e:
+        logging.warning(str(e))
+        return None
     
 #获取收藏夹内视频信息 
 def analysisFavorites(response_data):
@@ -84,7 +100,7 @@ def analysisFavorites(response_data):
 def getVideoByDir(media_id,dir):
     params = {'media_id': media_id}
     url = 'https://api.bilibili.com/x/v3/fav/resource/ids'
-    response = requests.get(url, cookies = cookies,params=params)
+    response = doGetRequest(url,params=params)
     data_dict = json.loads(response.text)
     data_list = data_dict["data"]
     for item in data_list:
@@ -99,7 +115,7 @@ def getVideoByDir(media_id,dir):
 def getVideoDetail(bvid,dir):
     params = {'bvid': bvid}
     url = 'https://api.bilibili.com/x/web-interface/view'
-    response = requests.get(url,cookies=cookies,params=params)
+    response = doGetRequest(url,params=params)
     data_dict = json.loads(response.text)
     datas = data_dict["data"]
     pages = datas['pages']
@@ -119,7 +135,7 @@ def getUrlByCid(bvid,cid,filename,dir):
     params = {'bvid': bvid,'cid':cid,'qn':0,'fnval':80,'fnver':0,'fourk':1}
     # 设置要请求的URL
     url = 'https://api.bilibili.com/x/player/playurl'
-    response = requests.get(url, cookies = cookies,params=params)
+    response = doGetRequest(url,params=params)
     data_dict = json.loads(response.text)
     datas = data_dict["data"]
     dashs = datas['dash']
@@ -150,7 +166,7 @@ def download_file(url, filename,realName):
     "User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36",
     'referer': 'https://www.bilibili.com'
     }
-    response = requests.get(url,cookies,headers=headers)
+    response = requests.get(url,headers=headers)
     if response.status_code == 200:
         total_size = int(response.headers.get('content-length', 0))
         file_path = os.path.join(current_directory, filename)
@@ -172,9 +188,9 @@ def download_file(url, filename,realName):
     else:
         print(f'请求失败，状态码：{response.status_code}')
         logging.warning(f"{realName}下载出错")
-    response = requests.get(url)
+    '''response = requests.get(url)
     with open(filename, 'wb') as file:
-        file.write(response.content)    
+        file.write(response.content)    '''
 
 #清理文件名中非法字符
 def clean_filename(filename):
