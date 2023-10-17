@@ -14,6 +14,7 @@ uid = 0
 script_path = os.path.abspath(__file__)
 current_directory = os.path.dirname(script_path)
 log_file_path = os.path.join(current_directory, '缓存日志.log')
+config_file = os.path.join(current_directory, 'DownLoadFavconfig.ini')
 logging.basicConfig(
     filename=log_file_path,
     level=logging.INFO,
@@ -25,9 +26,8 @@ def initConfig():
     print("开始初始化配置...")
     logging.info("开始初始化配置")
     global uid,cookies
-    config_file = os.path.join(current_directory, 'DownLoadFavconfig.ini')
     if not os.path.exists(config_file):
-        updateConfig(config_file=config_file)
+        updateConfig()
     config = configparser.ConfigParser(interpolation=None)
     config.read(config_file)
     if config.has_section('user'):
@@ -37,11 +37,11 @@ def initConfig():
         print("配置读取成功!")
     else:
         print("配置文件中缺少 'user' 部分，请检查配置文件格式。")
-        logging.warning("配置文件错误！")
-        updateConfig(config_file)
+        logging.ERROR("配置文件错误！")
+        updateConfig()
 
 #更新配置文件
-def updateConfig(config_file):
+def updateConfig():
     default_config = configparser.RawConfigParser()
     while True:
         uid  = input("请输入您的uid:")
@@ -197,14 +197,41 @@ def clean_filename(filename):
     pattern = r'[<>:"/\\|?*]'
     cleaned_filename = re.sub(pattern, '', filename)
     return cleaned_filename
-        
+
+#开始缓存
+def startDownload():
+    favList = getFavor()
+    if favList!='error':
+       analysisFavorites(favList)
+
+#指令
+orderName = {
+    '1':"更新配置",
+    '2':"开始缓存",
+    '3':"获取帮助"
+}
+
+def printHelp():
+    for instruction, description in orderName.items():
+        print(f"| {instruction} | {description} |")
+
+order = {
+    '1':updateConfig,
+    '2':startDownload,
+    '3':printHelp
+}
 
 def main():
     print("程序启动")
     logging.info("程序启动")
     initConfig()
-    favList = getFavor()
-    if favList!='error':
-       analysisFavorites(favList)
+    printHelp()
+    while True:
+        line = input("输入指令前的数字:")
+        if line not in order:
+            print("请输入正确的指令！")
+            continue
+        else:
+            order[line]()
 
 main()
