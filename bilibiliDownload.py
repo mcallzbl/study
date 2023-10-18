@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 
+isSupplement = False
 cookies = {'cookie':'YourCookie'}
 uid = 0
 script_path = os.path.abspath(__file__)
@@ -176,8 +177,13 @@ def downloadVideoByBvid(bvid,dir):
 
 #通过cid下载视频
 def downloadVideoByCid(bvid,cid,filename,dir):
+    videoPath = os.path.join(current_directory,dir)
+    videoFile = os.path.join(videoPath,f"{filename}.mp4")
+    if isSupplement:
+        if os.path.exists(videoFile):
+            print(f'{filename}已存在!')
+            return
     params = {'bvid': bvid,'cid':cid,'qn':127,'fnval':1040,'fnver':0,'fourk':1}
-    # 设置要请求的URL
     url = 'https://api.bilibili.com/x/player/playurl'
     response = doGetRequest(url,params=params)
     if response.status_code == 200:
@@ -190,7 +196,6 @@ def downloadVideoByCid(bvid,cid,filename,dir):
         audioUrl = audioUrls[0]['baseUrl']
         downloadFile(videoUrl,"video.m4s",filename)
         downloadFile(audioUrl,"audio.m4s",filename)
-        videoPath = os.path.join(current_directory,dir)
         if not os.path.exists(videoPath):
             os.makedirs(videoPath)
         mergeVideo(videoPath,filename)
@@ -261,17 +266,26 @@ def startDownload():
     if favList!=None:
        tasks = getDownloadTasks(favList)
     executeDownload(tasks,favList)
+    global isSupplement
+    isSupplement = False
+
+def supplement():
+    global isSupplement
+    isSupplement = True
+    startDownload()
 #退出程序
 def exitProgram():
     print("程序停止运行，欢迎下次光临！")
     logging.info("程序中止运行")
     sys.exit(0)
+
 #指令名称
 orderName = {
     '1':"更新配置",
     '2':"开始缓存",
-    '3':"显示指令",
-    '4':"退出程序"
+    '3':"增量缓存",
+    '4':"显示指令",
+    '5':"退出程序"
 }
 #输出指令列表
 def printHelp():
@@ -282,8 +296,9 @@ def printHelp():
 order = {
     '1':updateConfig,
     '2':startDownload,
-    '3':printHelp,
-    '4':exitProgram
+    '3':supplement,
+    '4':printHelp,
+    '5':exitProgram
 }
 #程序入口
 def main():
