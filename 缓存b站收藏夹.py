@@ -21,9 +21,9 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+#初始化配置
 def initConfig():
     print("开始初始化配置...")
-    logging.info("开始初始化配置")
     global uid,cookies
     if not os.path.exists(config_file):
         updateConfig()
@@ -56,10 +56,10 @@ def updateConfig():
     with open(config_file, 'w') as file:
         default_config.write(file)
     print("您的配置文件存储在：",config_file)
-    logging.info("配置文件写入完成")
+    logging.info("配置文件更新")
 
-#获取全部收藏夹
-def getFavor()->str:
+#获取用户拥有的全部收藏夹
+def getFavor()->list:
     print("正在读取您的收藏夹")
     logging.info("读取收藏夹...")
     url = 'https://api.bilibili.com/x/v3/fav/folder/created/list-all'
@@ -68,11 +68,13 @@ def getFavor()->str:
     if response.status_code == 200:
         print("读取全部收藏夹成功！")
         logging.info("读取全部收藏夹成功！")
-        return response.text
+        data_dict = json.loads(response.text)
+        data_list = data_dict["data"]["list"]
+        return data_list
     else:
         print(f'获取失败，状态码：{response.status_code}')
         logging.warning(f'获取失败，状态码：{response.status_code}')
-        return 'error'
+        return None
 
 #做get请求
 def doGetRequest(url, params=None, **kwargs):
@@ -94,7 +96,7 @@ def findHyphen(string,max)->list:
         strlist = string.split('-')
         numlist = [int(num) for num in strlist]
         index = numlist[0]
-        if index>max|numlist[1]>max:
+        if index>max|numlist[1]>max|index<1:
             return None
         while index<=numlist[1]:
             list.append(index)
@@ -102,10 +104,8 @@ def findHyphen(string,max)->list:
         return list
     return None
 
-#展示收藏夹 
-def showFavorites(response_data):
-    data_dict = json.loads(response_data)
-    data_list = data_dict["data"]["list"]
+#获取下载任务列表 
+def getDownloadTasks(data_list)->set:
     for index, item in enumerate(data_list):
         title = item['title']
         media_count = item['media_count']
@@ -123,17 +123,20 @@ def showFavorites(response_data):
                     for task in numlist:
                         tasks.add(task)
             break
+    return tasks
+    
+#执行下载任务
+def executeDownload(tasks,data_list):
     for task in tasks:
         #print(tasks)
-        executeDownload(data_list[int(task)-1])
-#执行下载任务
-def executeDownload(favouriteList):
-    title = favouriteList['title']
-    print("正在缓存收藏夹：",title)
-    getVideoByDir(favouriteList["id"],dir=title)
+        favouriteList = data_list[int(task)-1]
+        media_count = favouriteList['media_count']
+        title = favouriteList['title']
+        print("正在缓存收藏夹：",title)
+        downloadDir(favouriteList["id"],dir=title)
 
-#获取收藏夹下视频的bvid，并获取视频详细信息
-def getVideoByDir(media_id,dir):
+#缓存一个收藏夹
+def downloadDir(media_id,dir):
     params = {'media_id': media_id}
     url = 'https://api.bilibili.com/x/v3/fav/resource/ids'
     response = doGetRequest(url,params=params)
@@ -141,14 +144,14 @@ def getVideoByDir(media_id,dir):
     data_list = data_dict["data"]
     for item in data_list:
         try:
-            getVideoDetail(item['bvid'],dir=dir)
+            downloadVideoByBvid(item['bvid'],dir=dir)
         except Exception as e:
             error_message = str(e)
             logging.warning("获取视频详情失败(大概率是视频失效了)")
             logging.warning(error_message)
 
-#获取视频的详细信息
-def getVideoDetail(bvid,dir):
+#通过bvid下载视频
+def downloadVideoByBvid(bvid,dir):
     params = {'bvid': bvid}
     url = 'https://api.bilibili.com/x/web-interface/view'
     response = doGetRequest(url,params=params)
@@ -166,14 +169,13 @@ def getVideoDetail(bvid,dir):
                 filePath = dir
                 filename = datas["title"]
             filename = clean_filename(filename)
-            getUrlByCid(bvid,item['cid'],filename,filePath)
+            downloadVideoByCid(bvid,item['cid'],filename,filePath)
     else:
         print("获取视频详细信息失败")
         logging.error("获取视频详细信息失败")
-    
 
-#通过cid获取视频和音频文件的下载链接
-def getUrlByCid(bvid,cid,filename,dir):
+#通过cid下载视频
+def downloadVideoByCid(bvid,cid,filename,dir):
     params = {'bvid': bvid,'cid':cid,'qn':127,'fnval':1040,'fnver':0,'fourk':1}
     # 设置要请求的URL
     url = 'https://api.bilibili.com/x/player/playurl'
@@ -186,8 +188,8 @@ def getUrlByCid(bvid,cid,filename,dir):
         videoUrl = videoUrls[0]['baseUrl']
         audioUrls = dashs['audio']
         audioUrl = audioUrls[0]['baseUrl']
-        download_file(videoUrl,"video.m4s",filename)
-        download_file(audioUrl,"audio.m4s",filename)
+        downloadFile(videoUrl,"video.m4s",filename)
+        downloadFile(audioUrl,"audio.m4s",filename)
         videoPath = os.path.join(current_directory,dir)
         if not os.path.exists(videoPath):
             os.makedirs(videoPath)
@@ -216,8 +218,8 @@ def mergeVideo(videoPath,filename):
         logging.warning(f"{filename}合并出错!")
         logging.error(error_message)
 
-# 下载文件
-def download_file(url, filename,realname):
+#下载文件
+def downloadFile(url, filename,realname):
     headers = {
     "User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36",
     'referer': 'https://www.bilibili.com'
@@ -255,8 +257,10 @@ def clean_filename(filename):
 #开始缓存
 def startDownload():
     favList = getFavor()
-    if favList!='error':
-       showFavorites(favList)
+    tasks = set()
+    if favList!=None:
+       tasks = getDownloadTasks(favList)
+    executeDownload(tasks,favList)
 #退出程序
 def exitProgram():
     print("程序停止运行，欢迎下次光临！")
@@ -293,5 +297,5 @@ def main():
             print("请输入正确的指令！")
         else:
             order[line]()
-
+#启动程序
 main()
