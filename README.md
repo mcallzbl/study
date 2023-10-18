@@ -8,6 +8,3 @@ pip install requests<br>
 pip install tqdm<br>
 
 ### 需要自行安装符合你系统版本的ffmpeg并添加到环境变量
-若为linux可能会不支持flv<br>
-找到以下行代码并将flv改为mp4即可解决<br>
-videoFile = os.path.join(videoPath,f"{filename}.flv")
