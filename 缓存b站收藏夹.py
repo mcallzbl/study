@@ -10,7 +10,6 @@ import sys
 
 cookies = {'cookie':'YourCookie'}
 uid = 0
-
 script_path = os.path.abspath(__file__)
 current_directory = os.path.dirname(script_path)
 log_file_path = os.path.join(current_directory, '缓存日志.log')
@@ -49,7 +48,7 @@ def updateConfig():
             break
         else:
             print("请输入正确的uid!")
-    cookies['cookie'] = input("请输入您的cookies(似乎用私密模式获得的效果更好):")
+    cookies['cookie'] = input("请输入您的cookies(似乎用私密模式获得的更持久):")
     default_config['user'] = {
         'uid': uid,
         'cookies': cookies['cookie']
@@ -83,6 +82,7 @@ def doGetRequest(url, params=None, **kwargs):
         logging.warning(str(e))
         return None
     
+#根据'-'返回需要下载的收藏夹任务列表    
 def findHyphen(string,max)->list:
     count = string.count('-')
     if count==0:
@@ -110,7 +110,6 @@ def showFavorites(response_data):
         title = item['title']
         media_count = item['media_count']
         print(f"|{index+1}|{title}|{media_count}个视频")
-    
     tasks = set()
     while True:
         line = input("请输入你想要缓存的收藏夹前的编号(不同编号之间请用逗号分隔，也可用\"-\"表示连续的多个编号)\n").strip()
@@ -127,7 +126,7 @@ def showFavorites(response_data):
     for task in tasks:
         #print(tasks)
         executeDownload(data_list[int(task)-1])
-
+#执行下载任务
 def executeDownload(favouriteList):
     title = favouriteList['title']
     print("正在缓存收藏夹：",title)
@@ -153,40 +152,55 @@ def getVideoDetail(bvid,dir):
     params = {'bvid': bvid}
     url = 'https://api.bilibili.com/x/web-interface/view'
     response = doGetRequest(url,params=params)
-    data_dict = json.loads(response.text)
-    datas = data_dict["data"]
-    pages = datas['pages']
-    for item in pages:
-        filename = ''
-        filePath = ''
-        if datas['videos']>1:
-            filePath = dir+'/'+datas["title"]
-            filename = item['part']
-        else:
-            filePath = dir
-            filename = datas["title"]
-        getUrlByCid(bvid,item['cid'],filename=filename,dir=filePath)
+    if response.status_code == 200:
+        data_dict = json.loads(response.text)
+        datas = data_dict["data"]
+        pages = datas['pages']
+        for item in pages:
+            filename = ''
+            filePath = ''
+            if datas['videos']>1:
+                filePath = dir+'/'+datas["title"]
+                filename = item['part']
+            else:
+                filePath = dir
+                filename = datas["title"]
+            filename = clean_filename(filename)
+            getUrlByCid(bvid,item['cid'],filename,filePath)
+    else:
+        print("获取视频详细信息失败")
+        logging.error("获取视频详细信息失败")
+    
 
 #通过cid获取视频和音频文件的下载链接
 def getUrlByCid(bvid,cid,filename,dir):
-    params = {'bvid': bvid,'cid':cid,'qn':0,'fnval':80,'fnver':0,'fourk':1}
+    params = {'bvid': bvid,'cid':cid,'qn':127,'fnval':1040,'fnver':0,'fourk':1}
     # 设置要请求的URL
     url = 'https://api.bilibili.com/x/player/playurl'
     response = doGetRequest(url,params=params)
-    data_dict = json.loads(response.text)
-    datas = data_dict["data"]
-    dashs = datas['dash']
-    videoUrls = dashs['video']
-    videoUrl = videoUrls[0]['baseUrl']
-    audioUrls = dashs['audio']
-    audioUrl = audioUrls[0]['baseUrl']
-    download_file(videoUrl,"video.m4s",filename)
-    download_file(audioUrl,"audio.m4s",filename)
-    videoPath = os.path.join(current_directory,dir)
-    if not os.path.exists(videoPath):
-        os.makedirs(videoPath)
+    if response.status_code == 200:
+        data_dict = json.loads(response.text)
+        datas = data_dict["data"]
+        dashs = datas['dash']
+        videoUrls = dashs['video']
+        videoUrl = videoUrls[0]['baseUrl']
+        audioUrls = dashs['audio']
+        audioUrl = audioUrls[0]['baseUrl']
+        download_file(videoUrl,"video.m4s",filename)
+        download_file(audioUrl,"audio.m4s",filename)
+        videoPath = os.path.join(current_directory,dir)
+        if not os.path.exists(videoPath):
+            os.makedirs(videoPath)
+        mergeVideo(videoPath,filename)
+        logging.info(f"{filename}下载完成!")
+    else:
+        print("获取下载链接失败")
+        logging.error(f"{filename}获取下载链接失败")
+
+#将视频文件和音频文件合并
+def mergeVideo(videoPath,filename):
     print("合并文件...")
-    videoFile = os.path.join(videoPath,f"{filename}.flv")
+    videoFile = os.path.join(videoPath,f"{filename}.mp4")
     command = ['ffmpeg',
                 '-i', os.path.join(current_directory, "video.m4s"),
                 '-i', os.path.join(current_directory, "audio.m4s"), 
@@ -196,10 +210,11 @@ def getUrlByCid(bvid,cid,filename,dir):
         os.remove(os.path.join(current_directory, "video.m4s"))
         os.remove(os.path.join(current_directory, "audio.m4s"))
         print("合并完成!")
-    except subprocess.CalledProcessError as e:
-        print("合并过程中出现错误:", e)
+    except Exception as e:
+        error_message = str(e)
+        print("合并过程中出现错误:", error_message)
         logging.warning(f"{filename}合并出错!")
-    logging.info(f"{filename}下载完成!")
+        logging.error(error_message)
 
 # 下载文件
 def download_file(url, filename,realname):
@@ -222,12 +237,14 @@ def download_file(url, filename,realname):
                 for data in response.iter_content(chunk_size=1024):
                     progress_bar.update(len(data))
                     file.write(data)
-            except requests.exceptions.ChunkedEncodingError:
+            except Exception as e:
+                error_message = str(e)
                 logging.warning(f"{realname}下载出错")
+                logging.error(error_message)
         print(realname,'下载完成')
     else:
         print(f'请求失败，状态码：{response.status_code}')
-        logging.warning(f"{realname}下载出错")
+        logging.error(f"{realname}下载出错")
 
 #清理文件名中非法字符
 def clean_filename(filename):
@@ -242,19 +259,22 @@ def startDownload():
        showFavorites(favList)
 #退出程序
 def exitProgram():
+    print("程序停止运行，欢迎下次光临！")
+    logging.info("程序中止运行")
     sys.exit(0)
-#指令
+#指令名称
 orderName = {
     '1':"更新配置",
     '2':"开始缓存",
-    '3':"获取帮助",
+    '3':"显示指令",
     '4':"退出程序"
 }
-
+#输出指令列表
 def printHelp():
     for instruction, description in orderName.items():
         print(f"| {instruction} | {description} |")
 
+#指令集
 order = {
     '1':updateConfig,
     '2':startDownload,
