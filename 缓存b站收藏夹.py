@@ -182,10 +182,10 @@ def getUrlByCid(bvid,cid,filename,dir):
     audioUrl = audioUrls[0]['baseUrl']
     download_file(videoUrl,"video.m4s",filename)
     download_file(audioUrl,"audio.m4s",filename)
-    videoPath = current_directory+'\\'+dir
+    videoPath = os.path.join(current_directory,dir)
     if not os.path.exists(videoPath):
         os.makedirs(videoPath)
-    print("开始合并文件")
+    print("合并文件...")
     videoFile = os.path.join(videoPath,f"{filename}.flv")
     command = ['ffmpeg',
                 '-i', os.path.join(current_directory, "video.m4s"),
@@ -195,11 +195,11 @@ def getUrlByCid(bvid,cid,filename,dir):
         subprocess.run(command, check=True)
         os.remove(os.path.join(current_directory, "video.m4s"))
         os.remove(os.path.join(current_directory, "audio.m4s"))
-        print("合并完成")
+        print("合并完成!")
     except subprocess.CalledProcessError as e:
         print("合并过程中出现错误:", e)
-        logging.warning(f"{filename}合并出错")
-    logging.info(f"{filename}下载完成")
+        logging.warning(f"{filename}合并出错!")
+    logging.info(f"{filename}下载完成!")
 
 # 下载文件
 def download_file(url, filename,realname):
@@ -228,9 +228,6 @@ def download_file(url, filename,realname):
     else:
         print(f'请求失败，状态码：{response.status_code}')
         logging.warning(f"{realname}下载出错")
-    '''response = requests.get(url)
-    with open(filename, 'wb') as file:
-        file.write(response.content)    '''
 
 #清理文件名中非法字符
 def clean_filename(filename):
@@ -243,7 +240,7 @@ def startDownload():
     favList = getFavor()
     if favList!='error':
        showFavorites(favList)
-
+#退出程序
 def exitProgram():
     sys.exit(0)
 #指令
@@ -264,7 +261,7 @@ order = {
     '3':printHelp,
     '4':exitProgram
 }
-
+#程序入口
 def main():
     print("程序启动")
     logging.info("程序启动")
