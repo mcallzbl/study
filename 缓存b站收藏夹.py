@@ -5,7 +5,6 @@ import logging
 import configparser
 import json
 import re
-#from moviepy.editor import VideoFileClip, AudioFileClip
 import subprocess
 import sys
 
@@ -188,8 +187,7 @@ def getUrlByCid(bvid,cid,filename,dir):
         os.makedirs(videoPath)
     print("开始合并文件")
     videoFile = os.path.join(videoPath,f"{filename}.flv")
-    videoPath+'\\'+filename+'.flv'
-    command = [os.path.join(current_directory, 'ffmpeg'),
+    command = ['ffmpeg',
                 '-i', os.path.join(current_directory, "video.m4s"),
                 '-i', os.path.join(current_directory, "audio.m4s"), 
                 '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental','-y', '-v', 'error',videoFile]
@@ -276,7 +274,6 @@ def main():
         line = input("输入指令前的数字:")
         if line not in order:
             print("请输入正确的指令！")
-            continue
         else:
             order[line]()
 
