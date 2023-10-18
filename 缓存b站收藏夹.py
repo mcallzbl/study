@@ -5,8 +5,9 @@ import logging
 import configparser
 import json
 import re
-from moviepy.editor import VideoFileClip, AudioFileClip
-import stat
+#from moviepy.editor import VideoFileClip, AudioFileClip
+import subprocess
+import sys
 
 cookies = {'cookie':'YourCookie'}
 uid = 0
@@ -83,18 +84,55 @@ def doGetRequest(url, params=None, **kwargs):
         logging.warning(str(e))
         return None
     
-#获取收藏夹内视频信息 
-def analysisFavorites(response_data):
-    logging.info("开始分析收藏夹")
-    print("开始分析收藏夹...")
+def findHyphen(string,max)->list:
+    count = string.count('-')
+    if count==0:
+        if int(string)<=max:
+            return [string]
+        return None
+    elif count == 1:
+        list = []
+        strlist = string.split('-')
+        numlist = [int(num) for num in strlist]
+        index = numlist[0]
+        if index>max|numlist[1]>max:
+            return None
+        while index<=numlist[1]:
+            list.append(index)
+            index = index+1
+        return list
+    return None
+
+#展示收藏夹 
+def showFavorites(response_data):
     data_dict = json.loads(response_data)
     data_list = data_dict["data"]["list"]
-    for item in data_list:
+    for index, item in enumerate(data_list):
         title = item['title']
-        print("正在分析:",title)
-        getVideoByDir(item["id"],dir=title)
-    print("b站收藏夹分析完成！")
-    logging.info("b站收藏夹分析完成！")
+        media_count = item['media_count']
+        print(f"|{index+1}|{title}|{media_count}个视频")
+    
+    tasks = set()
+    while True:
+        line = input("请输入你想要缓存的收藏夹前的编号(不同编号之间请用逗号分隔，也可用\"-\"表示连续的多个编号)\n").strip()
+        if re.search(r'[^0-9,-]',line):
+            print("请输入合法的编号！")
+        else:
+            numbers = line.split(',')
+            for number in numbers:
+                numlist = findHyphen(number,len(data_list))
+                if numlist!=None:
+                    for task in numlist:
+                        tasks.add(task)
+            break
+    for task in tasks:
+        #print(tasks)
+        executeDownload(data_list[int(task)-1])
+
+def executeDownload(favouriteList):
+    title = favouriteList['title']
+    print("正在缓存收藏夹：",title)
+    getVideoByDir(favouriteList["id"],dir=title)
 
 #获取收藏夹下视频的bvid，并获取视频详细信息
 def getVideoByDir(media_id,dir):
@@ -148,25 +186,30 @@ def getUrlByCid(bvid,cid,filename,dir):
     videoPath = current_directory+'\\'+dir
     if not os.path.exists(videoPath):
         os.makedirs(videoPath)
-        folder_stat = os.stat(videoPath)
-        os.chmod(videoPath, folder_stat.st_mode | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
     print("开始合并文件")
-    videoFile = videoPath+'\\'+clean_filename(filename)+'.flv'
-    video_clip = VideoFileClip(os.path.join(current_directory,"video.m4s"))
-    audio_clip = AudioFileClip(os.path.join(current_directory,"audio.m4s"))
-    video_clip = video_clip.set_audio(audio_clip)
-    video_clip.write_videofile(videoFile, codec="flv")
-    audio_clip.close()
-    print("视频合并完成!")
+    videoFile = os.path.join(videoPath,f"{filename}.flv")
+    videoPath+'\\'+filename+'.flv'
+    command = [os.path.join(current_directory, 'ffmpeg'),
+                '-i', os.path.join(current_directory, "video.m4s"),
+                '-i', os.path.join(current_directory, "audio.m4s"), 
+                '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental','-y', '-v', 'error',videoFile]
+    try:
+        subprocess.run(command, check=True)
+        os.remove(os.path.join(current_directory, "video.m4s"))
+        os.remove(os.path.join(current_directory, "audio.m4s"))
+        print("合并完成")
+    except subprocess.CalledProcessError as e:
+        print("合并过程中出现错误:", e)
+        logging.warning(f"{filename}合并出错")
     logging.info(f"{filename}下载完成")
 
 # 下载文件
-def download_file(url, filename,realName):
+def download_file(url, filename,realname):
     headers = {
     "User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36",
     'referer': 'https://www.bilibili.com'
     }
-    response = requests.get(url,headers=headers)
+    response = requests.get(url,headers=headers, stream=True)
     if response.status_code == 200:
         total_size = int(response.headers.get('content-length', 0))
         file_path = os.path.join(current_directory, filename)
@@ -182,12 +225,11 @@ def download_file(url, filename,realName):
                     progress_bar.update(len(data))
                     file.write(data)
             except requests.exceptions.ChunkedEncodingError:
-                logging.warning(f"{realName}下载出错")
-
-        print(filename,'下载完成')
+                logging.warning(f"{realname}下载出错")
+        print(realname,'下载完成')
     else:
         print(f'请求失败，状态码：{response.status_code}')
-        logging.warning(f"{realName}下载出错")
+        logging.warning(f"{realname}下载出错")
     '''response = requests.get(url)
     with open(filename, 'wb') as file:
         file.write(response.content)    '''
@@ -202,13 +244,16 @@ def clean_filename(filename):
 def startDownload():
     favList = getFavor()
     if favList!='error':
-       analysisFavorites(favList)
+       showFavorites(favList)
 
+def exitProgram():
+    sys.exit(0)
 #指令
 orderName = {
     '1':"更新配置",
     '2':"开始缓存",
-    '3':"获取帮助"
+    '3':"获取帮助",
+    '4':"退出程序"
 }
 
 def printHelp():
@@ -218,7 +263,8 @@ def printHelp():
 order = {
     '1':updateConfig,
     '2':startDownload,
-    '3':printHelp
+    '3':printHelp,
+    '4':exitProgram
 }
 
 def main():
