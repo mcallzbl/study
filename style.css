@@ -1,0 +1,48 @@
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; 
+    margin: 0;
+    padding: 0;
+}
+#header{
+    padding: 5px;
+}
+#gender{
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+#marriage{
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+#container {
+    display: flex;
+    flex: 1;
+}
+#menu{
+    padding: 10px;
+}
+#all{
+    display: none;
+    flex: 1;
+}
+#my{
+    flex-direction: column;
+    flex: 1;
+}
+form {
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+#save{
+    margin: 10px;
+    max-width: 100px;
+}
+#footer{
+    text-align: center;
+    padding: 20px;
+}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资料分享</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="./script.js"></script>
+</head>
+<body>
+    <div id="header">
+        <h1>个人资料分享网站</h1>
+    </div>
+    <div id="container">
+        <div id="menu">
+            <oi>
+                <li onclick="showPage('all')">全部资料</li>           
+                <li onclick="showPage('my')">我的资料</li>
+            </oi>
+        </div>
+        <div id="all" class="content">
+            内容1
+        </div>
+        <div id="my" class="content">
+            <img id="avatar" alt="avatar" src="defaultAvatar.png">
+            <form action="/uploadAvatar" method="post" enctype="multipart/form-data">
+                <input type="file" name="image" accept="image/*">
+                <br>
+                <label for="name">姓名：
+                    <input id="name" type="text" name="name" required>
+                </label>
+                <label >性别：
+                        <div id="gender">
+                            <label>男<input name="gender" type="radio" required></label>
+                            <label>女<input name="gender" type="radio" required></label>
+                            <label>无性别<input name="gender" type="radio" required></label>
+                            <label>双性别<input name="gender" type="radio" required></label>
+                            <label>大陆性别<input name="gender" type="radio" required></label>
+                            <label>武装直升机<input name="gender" type="radio" required></label>
+                            <label>其他<input name="gender" type="radio" required></label>
+                        </div>
+                </label>
+                <label >个性签名：
+                    <input id="signature" type="text" name="signature" required>
+                </label>
+                <label >婚姻状况：
+                    <div id="marriage">
+                        <label>已婚<input name="marriage" type="radio" required></label>
+                        <label>无对象<input name="marriage" type="radio" required></label>
+                        <label>有一个对象<input name="marriage" type="radio" required></label>
+                        <label>有多个对象<input name="marriage" type="radio" required></label>
+                        <label>重婚<input name="marriage" type="radio" required></label>
+                        <label>其他(我想不到了)<input name="gender" type="radio" required></label>
+                    </div>
+                </label>
+                <label >玩什么游戏：
+                    <div id="games">
+                        <label>原神！<input name="games" type="checkbox" ></label>
+                        <label>崩溃：星穹铁道<input name="games" type="checkbox" ></label>
+                        <label>崩崩崩<input name="games" type="checkbox" ></label>
+                        <label>崩坏学校2<input name="games" type="checkbox" ></label>
+                        <label>确定事件薄<input name="games" type="checkbox" ></label>
+                        <label>狗熊联盟<input name="games" type="checkbox" ></label>
+                        <label>CF:GO<input name="games" type="checkbox" ></label>
+                        <label>穿越米线<input name="games" type="checkbox" ></label>
+                        <label>最初幻想41<input name="games" type="checkbox" ></label>
+                        <label>地下城与懦夫<input name="games" type="checkbox" ></label>
+                        <label>妖兽世界<input name="games" type="checkbox" ></label>
+                        <label>锅炉传说<input name="games" type="checkbox" ></label>
+                        <label>顺战<input name="games" type="checkbox" ></label>
+                        <label>星球战甲<input name="games" type="checkbox" ></label>
+                        <label>战车世界<input name="games" type="checkbox" ></label>
+                        <label>闲逛塔科夫<input name="games" type="checkbox" ></label>
+                        <label>OOTA14<input name="games" type="checkbox" ></label>
+                        <label>飞飞卡丁船<input name="games" type="checkbox" ></label>
+                        <label>黎明吃鸡<input name="games" type="checkbox" ></label>
+                        <label>怪物虐人</label><input name="games" type="checkbox" ></label>
+                        <label>Futa/Grand Order<input name="games" type="checkbox" ></label>
+                        <label>明天方船<input name="games" type="checkbox" ></label>
+                        <label>碧蓝航道<input name="games" type="checkbox" ></label>
+                        <label>守望后卫<input name="games" type="checkbox" ></label>
+                        <label>探险岛<input name="games" type="checkbox" ></label>
+                        <label>猛男前线<input name="games" type="checkbox" ></label>
+                        <label>霸者荣耀<input name="games" type="checkbox" ></label>
+                        <label>怪气师<input name="games" type="checkbox" ></label>
+                        <label>三国蒸<input name="games" type="checkbox" ></label>
+                        <label>火影刺客<input name="games" type="checkbox" ></label>
+                        <label>战双帕尼尼</label><input name="games" type="checkbox" ></label>
+                        <label>梦塔<input name="games" type="checkbox" ></label>
+                    </div>
+                </label>
+                <button id="save" type="submit">保存</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="footer">
+        <h1>To Be Continued...</h1>
+        Copyright © by mcallzbl All Rights Reserved.
+    </div>
+</body>
+</html>
